@@ -7,7 +7,7 @@ import DailyForecast from './components/DailyForecast'
 import Loading from './components/Loading'
 import Footer from './components/Footer'
 import WeatherBackground from './components/WeatherBackground'
-import { heroIconUrl } from './weatherIcons'
+import { heroIconUrl, sceneFor } from './weatherIcons'
 import './App.css'
 
 // La API key si legge dal .env (Vite espone solo le variabili con prefisso VITE_)
@@ -15,23 +15,30 @@ const API_KEY = import.meta.env.VITE_WEATHER_KEY
 
 const DEFAULT_CITY = 'Buenos Aires'
 
-// Rotte SPA: la URL è la "fonte di verità" della città mostrata.
-// /city/Tokyo si può condividere e ricaricare senza perdere nulla.
+// Colore d'accento per ogni scena: entra nella card come variabile CSS --accent
+const ACCENTS = {
+  sun: '#ffb02e',
+  clouds: '#ffb02e',
+  rain: '#6ea8ff',
+  storm: '#8fb1ff',
+  snow: '#a5d8ff',
+  stars: '#b7a6ff',
+  mist: '#c9c9c9',
+}
+
+// Rotte SPA: la URL è la fonte di verità della città mostrata (condivisibile)
 function App() {
   return (
     <Routes>
       <Route path="/" element={<WeatherPage />} />
       <Route path="/city/:cityName" element={<WeatherPage />} />
-      {/* Qualsiasi altra URL torna alla home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
-// Componente PADRE della pagina: qui vivono tutti gli stati e la logica.
-// I figli ricevono dati e funzioni via props ("lifting state up").
+// Componente PADRE: qui vivono stati e logica, i figli ricevono props ("lifting state up")
 function WeatherPage() {
-  // La città arriva dalla URL; senza parametro si usa quella di default
   const { cityName } = useParams()
   const navigate = useNavigate()
 
@@ -46,8 +53,16 @@ function WeatherPage() {
   // Giorno selezionato nel pannello di destra (null = oggi / meteo attuale)
   const [selectedDay, setSelectedDay] = useState(null)
 
-  // Lazy init: localStorage si legge solo al primo render,
-  // così la lista sopravvive alla chiusura della pagina
+  // Direzione dell'animazione: avanti = entra da destra, indietro = da sinistra
+  const [slideDir, setSlideDir] = useState('fwd')
+
+  function handleDaySelect(date) {
+    // Le date ISO si confrontano come stringhe; '' (oggi) è la più piccola
+    setSlideDir((date || '') > (selectedDay || '') ? 'fwd' : 'back')
+    setSelectedDay(date)
+  }
+
+  // Lazy init: localStorage si legge solo al primo render
   const [recentCities, setRecentCities] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('recentCities')) || []
@@ -67,7 +82,7 @@ function WeatherPage() {
     setError(null)
     setWeather(null)
     setForecast(null)
-    setSelectedDay(null) // nuova città → si riparte dal meteo di oggi
+    setSelectedDay(null)
 
     try {
       // units=metric → gradi Celsius | lang=it → descrizione in italiano
@@ -115,14 +130,12 @@ function WeatherPage() {
     }
   }
 
-  // Ogni volta che cambia la città nella URL (ricerca, link condiviso,
-  // frecce avanti/indietro del browser) si scarica il meteo corrispondente
+  // Cambia la città nella URL (ricerca, link, frecce del browser) → nuovo fetch
   useEffect(() => {
     fetchWeather(cityName || DEFAULT_CITY)
   }, [cityName])
 
-  // Autocomplete con debounce: 350ms di pausa prima di chiamare la Geocoding API;
-  // la cleanup cancella il timer se l'utente digita ancora
+  // Autocomplete con debounce: 350ms di pausa prima di chiamare la Geocoding API
   useEffect(() => {
     if (!showSuggestions || city.trim().length < 2) {
       setSuggestions([])
@@ -145,7 +158,7 @@ function WeatherPage() {
     return () => clearTimeout(timer)
   }, [city, showSuggestions])
 
-  // Cercare = navigare: cambia la rotta e l'useEffect qui sopra fa il resto
+  // Cercare = navigare: cambia la rotta e l'useEffect [cityName] fa il resto
   function goToCity(searchName) {
     navigate(`/city/${encodeURIComponent(searchName)}`)
   }
@@ -155,7 +168,7 @@ function WeatherPage() {
     setShowSuggestions(true)
   }
 
-  // Passiamo anche il codice paese (es. "Roma,IT") per evitare ambiguità
+  // Col codice paese (es. "Roma,IT") si evitano le città omonime
   function handleSuggestionClick(sugg) {
     setShowSuggestions(false)
     setSuggestions([])
@@ -168,7 +181,6 @@ function WeatherPage() {
     goToCity(selectedName)
   }
 
-  // Rimuove una città dalle recenti (stato + localStorage)
   function handleRecentRemove(selectedName) {
     setRecentCities((prev) => {
       const updated = prev.filter((c) => c !== selectedName)
@@ -189,9 +201,8 @@ function WeatherPage() {
     setCity('')
   }
 
-  // --- DETTAGLIO del giorno selezionato ---
-  // Le voci /forecast hanno la stessa forma di /weather (main, wind, weather[0]):
-  // la voce di metà giornata fa da "meteo del giorno" per WeatherCard e icona
+  // Dettaglio del giorno selezionato: le voci /forecast hanno la stessa forma
+  // di /weather, quindi quella di metà giornata fa da "meteo del giorno"
   const dayItems =
     selectedDay && forecast
       ? forecast.list.filter((i) => i.dt_txt.slice(0, 10) === selectedDay)
@@ -216,15 +227,23 @@ function WeatherPage() {
       })
     : null
 
+  // Scena e accento seguono il meteo mostrato (anche il giorno selezionato)
+  const scene = heroWeather ? sceneFor(heroWeather.weather[0].icon) : null
+  const accent = ACCENTS[scene] || '#ffb02e'
+
   return (
     <>
-      {/* Scena animata sullo sfondo DELLA PAGINA (dietro la card).
-          Segue il meteo mostrato, anche il giorno selezionato */}
+      {/* Scena meteo sullo sfondo della pagina, dietro la card */}
       {heroWeather && !loading && (
         <WeatherBackground icon={heroWeather.weather[0].icon} />
       )}
 
-      <div className="app-card">
+      <div className="app-card" style={{ '--accent': accent }}>
+        {/* La stessa scena anche dentro la card (variante ritagliata) */}
+        {heroWeather && !loading && (
+          <WeatherBackground icon={heroWeather.weather[0].icon} variant="card" />
+        )}
+
         <SearchBar
           city={city}
           onCityChange={handleCityChange}
@@ -236,20 +255,35 @@ function WeatherPage() {
           onRecentRemove={handleRecentRemove}
           location={weather ? `${weather.name}, ${weather.sys.country}` : '—'}
           countryCode={weather ? weather.sys.country : null}
+          timezone={weather ? weather.timezone : null}
         />
 
-        {/* Rendering condizionale: spinner, errore o i pannelli con i dati */}
+        {/* Rendering condizionale: skeleton, errore o i pannelli con i dati */}
         {loading && <Loading />}
 
         {error && !loading && <p className="status-error">{error}</p>}
 
         {weather && !loading && (
           <div className="hero">
-            <WeatherCard weather={heroWeather} dayLabel={dayLabel} minMax={minMax} />
+            {/* key (con prefisso: dev'essere unica tra fratelli!): cambiando
+                giorno il blocco si ricrea e l'animazione slide riparte */}
+            <div className={`slide-${slideDir}`} key={`card-${selectedDay || 'now'}`}>
+              <WeatherCard
+                weather={heroWeather}
+                dayLabel={dayLabel}
+                minMax={minMax}
+                sun={{
+                  sunrise: weather.sys.sunrise,
+                  sunset: weather.sys.sunset,
+                  timezone: weather.timezone,
+                }}
+              />
+            </div>
 
-            <div className="hero-figure">
+            <div className="hero-figure pop" key={`fig-${selectedDay || 'now'}`}>
+              {/* hero-icon-{scena}: l'animazione dell'icona segue il meteo */}
               <img
-                className="hero-icon"
+                className={`hero-icon hero-icon-${scene}`}
                 src={heroIconUrl(heroWeather.weather[0].icon)}
                 alt={heroWeather.weather[0].description}
               />
@@ -259,18 +293,19 @@ function WeatherPage() {
               <DailyForecast
                 forecast={forecast}
                 selectedDate={selectedDay}
-                onDaySelect={setSelectedDay}
+                onDaySelect={handleDaySelect}
+                slideDir={slideDir}
               />
             )}
           </div>
         )}
 
-        {/* key: cambiando giorno il componente si ricrea e riparte da pagina 0 */}
         {forecast && !loading && (
           <HourlyForecast
             forecast={forecast}
             selectedDate={selectedDay}
-            key={selectedDay || 'all'}
+            slideDir={slideDir}
+            key={`hours-${selectedDay || 'all'}`}
           />
         )}
       </div>

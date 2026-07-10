@@ -2,11 +2,45 @@
 // Tre zone: marchio | pillola della località + data | barra di ricerca.
 // Lo stato della ricerca vive in App: qui arrivano solo props.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Bandiera del paese da flagcdn.com a partire dal codice ISO (es. "IT" → it.png)
 function flagUrl(countryCode, width = 40) {
   return `https://flagcdn.com/w${width}/${countryCode.toLowerCase()}.png`
+}
+
+// Data e ora LOCALI della città, aggiornate ogni secondo.
+// timezone è lo scostamento in secondi da UTC (da /weather): sommandolo
+// al tempo attuale e formattando in UTC si ottiene l'ora della città
+function CityDateTime({ timezone }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer) // cleanup: niente timer fantasma
+  }, [])
+
+  const hasTz = timezone !== null && timezone !== undefined
+  const date = new Date(hasTz ? now + timezone * 1000 : now)
+  const opts = hasTz ? { timeZone: 'UTC' } : {}
+
+  const dayText = date.toLocaleDateString('it-IT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    ...opts,
+  })
+  const timeText = date.toLocaleTimeString('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...opts,
+  })
+
+  return (
+    <span className="topbar-date">
+      {dayText} · <span className="topbar-clock">{timeText}</span>
+    </span>
+  )
 }
 
 function SearchBar({
@@ -20,16 +54,10 @@ function SearchBar({
   onRecentRemove,
   location,
   countryCode,
+  timezone,
 }) {
   // Unico stato LOCALE: è solo un dettaglio di interfaccia, può vivere qui
   const [showRecent, setShowRecent] = useState(false)
-
-  // Data di oggi in italiano, es. "venerdì 10 luglio"
-  const today = new Date().toLocaleDateString('it-IT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
 
   return (
     <header className="topbar">
@@ -118,7 +146,7 @@ function SearchBar({
           )}
         </div>
 
-        <span className="topbar-date">({today})</span>
+        <CityDateTime timezone={timezone} />
       </div>
 
       <form className="search-form" onSubmit={onSearch}>

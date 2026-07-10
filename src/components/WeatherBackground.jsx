@@ -3,17 +3,7 @@
 // fenomeno, la lettera d/n dice giorno o notte. Solo CSS, nessuna libreria.
 
 import { useMemo } from 'react'
-
-function sceneFor(icon) {
-  const code = icon.slice(0, 2)
-  const night = icon.endsWith('n')
-  if (code === '11') return 'storm'
-  if (code === '09' || code === '10') return 'rain'
-  if (code === '13') return 'snow'
-  if (code === '50') return 'mist'
-  if (code === '01') return night ? 'stars' : 'sun'
-  return 'clouds' // 02, 03, 04
-}
+import { sceneFor } from '../weatherIcons'
 
 // n particelle con posizioni/tempi casuali.
 // useMemo le tiene stabili: si rigenerano solo quando cambia la scena
@@ -27,7 +17,9 @@ function makeParticles(n) {
   }))
 }
 
-function WeatherBackground({ icon }) {
+// variant: 'page' (default, fisso dietro tutto) oppure 'card' (assoluto
+// DENTRO la card, ritagliato dai suoi angoli arrotondati)
+function WeatherBackground({ icon, variant = 'page' }) {
   const scene = icon ? sceneFor(icon) : null
 
   const particles = useMemo(() => {
@@ -40,7 +32,10 @@ function WeatherBackground({ icon }) {
   if (!scene) return null
 
   return (
-    <div className={`weather-bg weather-bg-${scene}`} aria-hidden="true">
+    <div
+      className={`weather-bg weather-bg-${scene} ${variant === 'card' ? 'weather-bg-card' : ''}`}
+      aria-hidden="true"
+    >
       {(scene === 'rain' || scene === 'storm') &&
         particles.map((p) => (
           <span

@@ -1,7 +1,32 @@
-// Componente FIGLIO di presentazione: temperatura, descrizione, vento e umidità.
+// Componente FIGLIO di presentazione: temperatura, descrizione e statistiche.
 // Non chiede dati, riceve tutto via props.
 
-// Mini-componente per le due statistiche: etichetta sopra, valore sotto
+import { useEffect, useState } from 'react'
+import SunArc from './SunArc'
+
+// Il numero "conta" fino alla temperatura in ~450ms (easing cubico)
+function useCountUp(target, ms = 450) {
+  const [value, setValue] = useState(0)
+
+  useEffect(() => {
+    let frame
+    const start = performance.now()
+
+    function tick(now) {
+      const t = Math.min((now - start) / ms, 1)
+      const eased = 1 - (1 - t) ** 3
+      setValue(Math.round(target * eased))
+      if (t < 1) frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [target, ms])
+
+  return value
+}
+
+// Mini-componente per le statistiche: etichetta sopra, valore sotto
 function Stat({ icon, label, value }) {
   return (
     <div className="stat">
@@ -47,14 +72,36 @@ const thermoIcon = (
   </svg>
 )
 
-// dayLabel e minMax arrivano solo quando è selezionato un giorno futuro
-function WeatherCard({ weather, dayLabel, minMax }) {
+const gaugeIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M5 16a7 7 0 1 1 14 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M12 16l3.5-4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+)
+
+const rangeIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M8 17V7m0 0L5 10m3-3 3 3M16 7v10m0 0 3-3m-3 3-3-3"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+// dayLabel e minMax arrivano solo quando è selezionato un giorno futuro;
+// sun (alba/tramonto) arriva sempre dal meteo attuale della città
+function WeatherCard({ weather, dayLabel, minMax, sun }) {
+  const temp = useCountUp(Math.round(weather.main.temp))
+
   return (
     <div className="current">
       {dayLabel && <p className="current-day">{dayLabel}</p>}
 
       <p className="current-temp">
-        {Math.round(weather.main.temp)}
+        {temp}
         <span className="current-unit">°c</span>
       </p>
 
@@ -68,10 +115,18 @@ function WeatherCard({ weather, dayLabel, minMax }) {
           value={`${(weather.wind.speed * 3.6).toFixed(1)}km/h`}
         />
         <Stat icon={humidityIcon} label="Umidità" value={`${weather.main.humidity}%`} />
+        <Stat
+          icon={thermoIcon}
+          label="Percepita"
+          value={`${Math.round(weather.main.feels_like)}°`}
+        />
+        <Stat icon={gaugeIcon} label="Pressione" value={`${weather.main.pressure} hPa`} />
         {minMax && (
-          <Stat icon={thermoIcon} label="Min / Max" value={`${minMax.min}° / ${minMax.max}°`} />
+          <Stat icon={rangeIcon} label="Min / Max" value={`${minMax.min}° / ${minMax.max}°`} />
         )}
       </div>
+
+      {sun && <SunArc sunrise={sun.sunrise} sunset={sun.sunset} timezone={sun.timezone} />}
     </div>
   )
 }

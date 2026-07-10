@@ -1,11 +1,9 @@
 // Componente FIGLIO: la fascia oraria in basso.
-// La linea ondulata è un grafico vero: passa per le temperature delle
-// prossime ore. /forecast dà 40 voci (ogni 3 ore per 5 giorni):
-// ne mostriamo 8 alla volta, le frecce cambiano "pagina".
+// Mostra SOLO le ore del giorno scelto nel pannello di destra;
+// senza selezione, le prossime 24 ore. La linea ondulata è un grafico
+// vero: passa per le temperature e ogni numero è seduto sul suo punto.
 
-import { useState } from 'react'
-
-const PER_PAGE = 8
+import { iconUrl } from '../weatherIcons'
 
 // Dimensioni "virtuali" del disegno SVG (il viewBox)
 const VIEW_W = 800
@@ -30,20 +28,14 @@ function buildPath(points) {
   return d
 }
 
-function HourlyForecast({ forecast, selectedDate }) {
-  // Stato LOCALE: quale pagina di orari stiamo guardando
-  const [page, setPage] = useState(0)
-
-  // Con un giorno selezionato si mostrano solo le sue ore
-  const list = selectedDate
+function HourlyForecast({ forecast, selectedDate, slideDir }) {
+  // Giorno selezionato → le sue fasce orarie; altrimenti le prossime 24 ore
+  const hours = selectedDate
     ? forecast.list.filter((i) => i.dt_txt.slice(0, 10) === selectedDate)
-    : forecast.list
-
-  const totalPages = Math.ceil(list.length / PER_PAGE)
-  const hours = list.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE)
+    : forecast.list.slice(0, 8)
 
   // Ogni temperatura diventa un punto: x al centro della sua colonna,
-  // y in proporzione tra minima (basso) e massima (alto) della pagina
+  // y in proporzione tra minima (basso) e massima (alto)
   const temps = hours.map((h) => h.main.temp)
   const min = Math.min(...temps)
   const max = Math.max(...temps)
@@ -57,35 +49,34 @@ function HourlyForecast({ forecast, selectedDate }) {
 
   return (
     <section className="hourly">
-      {/* key={page}: cambiando pagina React ricrea il blocco e
-          l'animazione CSS di entrata riparte */}
-      <div className="hourly-strip" key={page}>
+      <div className={`hourly-strip slide-${slideDir || 'fwd'}`}>
         <svg
           className="hourly-wave"
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           preserveAspectRatio="none"
           aria-hidden="true"
         >
+          <defs>
+            {/* Sfumatura verticale sotto la curva: colore d'accento → trasparente */}
+            <linearGradient id="hourly-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" className="hourly-fill-top" />
+              <stop offset="100%" className="hourly-fill-bottom" />
+            </linearGradient>
+          </defs>
+          {/* Area riempita: la stessa curva chiusa fino al bordo inferiore */}
+          <path
+            d={`${buildPath(points)} L ${VIEW_W} ${VIEW_H} L 0 ${VIEW_H} Z`}
+            fill="url(#hourly-fill)"
+            stroke="none"
+          />
           <path d={buildPath(points)} stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>
 
         {hours.map((hour, index) => {
           // La voce attiva (la più vicina ad ADESSO) ha senso solo senza
           // giorno selezionato: un giorno futuro non contiene "adesso"
-          const isNow = !selectedDate && page === 0 && index === 0
+          const isNow = !selectedDate && index === 0
           const y = points[index].y
-
-          // Il giorno ("ven", "sab"...) si mostra solo quando cambia
-          // rispetto alla colonna precedente
-          const day = new Date(hour.dt * 1000).toLocaleDateString('it-IT', {
-            weekday: 'short',
-          })
-          const prevDay =
-            index > 0 &&
-            new Date(hours[index - 1].dt * 1000).toLocaleDateString('it-IT', {
-              weekday: 'short',
-            })
-          const showDay = index === 0 || day !== prevDay
 
           return (
             <div className="hourly-col" key={hour.dt}>
@@ -100,8 +91,12 @@ function HourlyForecast({ forecast, selectedDate }) {
                 )}
               </div>
 
-              {/* &nbsp; quando non va mostrato: occupa comunque la riga */}
-              <span className="hourly-day">{showDay ? day : ' '}</span>
+              {/* Iconcina del meteo di quella fascia oraria */}
+              <img
+                className="hourly-icon"
+                src={iconUrl(hour.weather[0].icon, 'line')}
+                alt={hour.weather[0].description}
+              />
 
               {/* dt è in secondi; Date vuole millisecondi → * 1000 */}
               <span className={`hourly-time ${isNow ? 'hourly-time-active' : ''}`}>
@@ -113,44 +108,6 @@ function HourlyForecast({ forecast, selectedDate }) {
             </div>
           )
         })}
-      </div>
-
-      {/* Frecce disabilitate ai bordi della lista */}
-      <div className="hourly-nav">
-        <button
-          type="button"
-          className="hourly-arrow"
-          onClick={() => setPage((p) => p - 1)}
-          disabled={page === 0}
-          aria-label="Ore precedenti"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15 6l-6 6 6 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="hourly-arrow"
-          onClick={() => setPage((p) => p + 1)}
-          disabled={page >= totalPages - 1}
-          aria-label="Ore successive"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M9 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
       </div>
     </section>
   )

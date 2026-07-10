@@ -26,6 +26,19 @@ export function iconUrl(owmCode, style = 'fill') {
   return icons[`${base}/${owmCode}.svg`] || icons[`${base}/04d.svg`]
 }
 
+// Mappa il codice icona in un tipo di scena per lo sfondo animato:
+// il numero dice il fenomeno, la lettera d/n dice giorno o notte
+export function sceneFor(icon) {
+  const code = icon.slice(0, 2)
+  const night = icon.endsWith('n')
+  if (code === '11') return 'storm'
+  if (code === '09' || code === '10') return 'rain'
+  if (code === '13') return 'snow'
+  if (code === '50') return 'mist'
+  if (code === '01') return night ? 'stars' : 'sun'
+  return 'clouds' // 02, 03, 04
+}
+
 export function heroIconUrl(owmCode) {
   return (
     heroIcons[`/src/assets/weather3d/${owmCode}.png`] ||
