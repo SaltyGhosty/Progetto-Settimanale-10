@@ -1,0 +1,859 @@
+/* ===== Replica del design di riferimento =====
+   Palette: pagina #101010 · card #1d1d1d · pannelli #262626
+   testo #f2f2f2 / #8f8f8f · accento arancione #ffb02e */
+
+/* ===== La card che contiene tutta l'app ===== */
+.app-card {
+  position: relative;
+  z-index: 1; /* la card sta sopra la scena meteo della pagina */
+  width: 100%;
+  max-width: 1180px;
+  min-height: 620px;
+  margin: auto; /* centrata in orizzontale E in verticale */
+  padding: 34px 48px 40px;
+  border-radius: 40px;
+  /* Card quasi nera con una luce tenue che scende dall'alto */
+  background:
+    radial-gradient(900px 420px at 50% -10%, rgba(255, 255, 255, 0.05), transparent 60%),
+    linear-gradient(180deg, #1d1d1d, #151515);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 50px 100px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fadeIn 0.5s ease both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ===== Scene meteo animate sullo sfondo della PAGINA ===== */
+.weather-bg {
+  position: fixed; /* copre tutta la finestra, dietro la card */
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Tinta leggera della pagina in base alla scena */
+.weather-bg-rain,
+.weather-bg-storm {
+  background: linear-gradient(180deg, rgba(45, 60, 95, 0.3), transparent 65%);
+}
+
+.weather-bg-snow {
+  background: linear-gradient(180deg, rgba(120, 150, 190, 0.14), transparent 65%);
+}
+
+.weather-bg-stars {
+  background: linear-gradient(180deg, rgba(10, 16, 34, 0.55), transparent 80%);
+}
+
+.weather-bg-sun {
+  background: linear-gradient(180deg, rgba(255, 176, 46, 0.08), transparent 60%);
+}
+
+.weather-bg-mist {
+  background: linear-gradient(180deg, rgba(160, 160, 160, 0.1), transparent 70%);
+}
+
+/* --- Pioggia --- */
+.bg-drop {
+  position: absolute;
+  top: -15%;
+  width: 1.5px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(transparent, rgba(160, 190, 255, 0.4));
+  animation: bg-fall linear infinite;
+}
+
+@keyframes bg-fall {
+  to {
+    /* leggermente in diagonale, come pioggia col vento */
+    transform: translate(-60px, 115vh);
+  }
+}
+
+/* --- Lampo del temporale: quasi sempre invisibile, doppio flash ogni 7s --- */
+.bg-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% -10%, rgba(190, 205, 255, 0.5), transparent 60%);
+  opacity: 0;
+  animation: bg-lightning 7s infinite;
+}
+
+@keyframes bg-lightning {
+  0%, 84%, 89%, 100% { opacity: 0; }
+  85% { opacity: 0.35; }
+  86% { opacity: 0.05; }
+  87.5% { opacity: 0.45; }
+}
+
+/* --- Neve --- */
+.bg-flake {
+  position: absolute;
+  top: -10%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  filter: blur(0.5px);
+  animation: bg-snow linear infinite;
+}
+
+@keyframes bg-snow {
+  to {
+    /* --sway: deriva orizzontale diversa per ogni fiocco (inline style) */
+    transform: translate(var(--sway, 30px), 115vh);
+  }
+}
+
+/* --- Stelle (notte serena) --- */
+.bg-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: bg-twinkle ease-in-out infinite alternate;
+}
+
+@keyframes bg-twinkle {
+  from { opacity: 0.08; }
+  to { opacity: 0.7; }
+}
+
+/* --- Nuvole alla deriva --- */
+.bg-cloud {
+  position: absolute;
+  left: -500px;
+  width: 460px;
+  height: 140px;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.07), transparent 70%);
+  filter: blur(6px);
+  animation: bg-drift linear infinite;
+}
+
+@keyframes bg-drift {
+  to { transform: translateX(calc(100vw + 1100px)); }
+}
+
+/* --- Nebbia: fasce chiare che oscillano piano --- */
+.bg-fog {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 90px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  filter: blur(8px);
+  animation: bg-fog-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes bg-fog-drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+
+/* --- Sole (giorno sereno): bagliore caldo che respira in alto --- */
+.bg-sun {
+  position: absolute;
+  top: -280px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 760px;
+  height: 760px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 190, 80, 0.16),
+    rgba(255, 176, 46, 0.05) 45%,
+    transparent 68%
+  );
+  animation: bg-sun-pulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes bg-sun-pulse {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
+/* ===== Topbar: marchio | località + data | barra di ricerca ===== */
+.topbar {
+  display: grid;
+  /* Colonne laterali uguali (1fr) → il centro resta perfettamente centrato */
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand {
+  justify-self: start;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #d6d6d6;
+  letter-spacing: 0.01em;
+}
+
+.location-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.location-pill {
+  position: relative; /* àncora per il menu a tendina assoluto */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.location-pin {
+  display: flex;
+  color: #bdbdbd;
+}
+
+/* Bandiera del paese nella pillola della località */
+.location-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.location-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f2f2f2;
+  white-space: nowrap;
+}
+
+.location-chevron {
+  display: flex;
+  border: none;
+  background: none;
+  color: #9a9a9a;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s;
+}
+
+.location-chevron:hover {
+  color: #fff;
+}
+
+.topbar-date {
+  font-size: 0.8rem;
+  color: #8f8f8f;
+  white-space: nowrap;
+}
+
+/* --- Barra di ricerca (a destra) --- */
+.search-form {
+  position: relative; /* àncora per il menu dei suggerimenti */
+  justify-self: end;
+  width: 240px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: #8f8f8f;
+  pointer-events: none; /* i click passano all'input sotto */
+}
+
+.search-input {
+  width: 100%;
+  padding: 9px 14px 9px 38px; /* spazio a sinistra per la lente */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f2f2f2;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.search-input::placeholder {
+  color: #8f8f8f;
+}
+
+.search-input:focus {
+  border-color: rgba(255, 176, 46, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ===== Menu a tendina (suggerimenti e città recenti) ===== */
+.dropdown {
+  position: absolute; /* si sovrappone al contenuto, non lo sposta */
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  list-style: none;
+  background: #262626;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  animation: fadeIn 0.18s ease both;
+}
+
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: none;
+  background: none;
+  color: #f2f2f2;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dropdown li + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Riga delle recenti: nome (cerca) + × (elimina) fianco a fianco */
+.dropdown-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.dropdown-row .dropdown-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-remove {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border: none;
+  background: none;
+  color: #6f6f6f;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.dropdown-remove:hover {
+  color: #ffb4b4;
+  background: rgba(255, 99, 99, 0.08);
+}
+
+.dropdown-city {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Bandierina nei suggerimenti */
+.dropdown-flag {
+  width: 17px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.dropdown-detail {
+  font-size: 0.72rem;
+  color: #8f8f8f;
+}
+
+.dropdown-empty {
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  color: #8f8f8f;
+}
+
+/* ===== Stati: caricamento ed errore ===== */
+.status-loading {
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #bdbdbd;
+  font-size: 0.95rem;
+}
+
+/* Cerchio che gira: bordo chiaro con un lato pieno + rotazione infinita */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ffb02e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-error {
+  margin: auto;
+  padding: 14px 26px;
+  border-radius: 14px;
+  background: rgba(255, 99, 99, 0.1);
+  border: 1px solid rgba(255, 120, 120, 0.3);
+  color: #ffb4b4;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ===== Hero: sinistra | icona | pannello giorni ===== */
+.hero {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr) 264px;
+  align-items: center;
+  gap: 24px;
+}
+
+/* --- Blocco di sinistra --- */
+
+/* Etichetta arancione del giorno selezionato (es. "domenica 12 luglio") */
+.current-day {
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ffb02e;
+  text-transform: capitalize;
+  letter-spacing: 0.05em;
+}
+
+.current-temp {
+  font-size: 5.6rem;
+  font-weight: 200; /* sottile, come nel design */
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.current-unit {
+  font-size: 1.3rem;
+  font-weight: 300;
+  vertical-align: super;
+  margin-left: 4px;
+  color: #d6d6d6;
+}
+
+.current-desc {
+  margin-top: 14px;
+  font-size: 1.55rem;
+  font-weight: 300;
+  color: #e6e6e6;
+  text-transform: capitalize;
+}
+
+.current-stats {
+  margin-top: 34px;
+  display: flex;
+  flex-wrap: wrap; /* con 3 statistiche (Min/Max) può andare a capo */
+  gap: 24px 40px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #9a9a9a;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #f2f2f2;
+}
+
+/* --- Illustrazione meteo 3D grande al centro --- */
+.hero-figure {
+  position: relative;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bagliore caldo DIETRO l'illustrazione */
+.hero-figure::before {
+  content: '';
+  position: absolute;
+  width: 130%;
+  height: 130%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 176, 46, 0.14) 0%,
+    rgba(255, 176, 46, 0.05) 40%,
+    transparent 70%
+  );
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.hero-icon {
+  position: relative; /* sopra il bagliore ::before */
+  width: 100%;
+  max-width: 300px;
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.55));
+  animation: float 4.5s ease-in-out infinite;
+}
+
+/* L'illustrazione "galleggia" su e giù */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* --- Pannello dei prossimi giorni (a destra) --- */
+.daily {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 8px 14px;
+}
+
+.daily-list {
+  list-style: none;
+}
+
+/* Ogni riga è un BOTTONE (si clicca per vedere il dettaglio del giorno):
+   qui si azzera l'aspetto di default dei button */
+.daily-row {
+  position: relative; /* àncora per la barretta arancione ::before */
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.daily-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.daily-list li + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* La barretta arancione a sinistra della riga attiva (oggi) */
+.daily-row-active::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  border-radius: 3px;
+  background: #ffb02e;
+}
+
+.daily-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  /* I Meteocon "line" hanno aria interna: margine negativo per allinearli */
+  margin: -3px;
+}
+
+.daily-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.daily-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.daily-desc {
+  font-size: 0.64rem;
+  color: #8f8f8f;
+  text-transform: capitalize;
+  /* Descrizione lunga → puntini invece di andare a capo */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.daily-temp {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #e6e6e6;
+  font-variant-numeric: tabular-nums; /* numeri allineati riga per riga */
+}
+
+/* Il simbolo dei gradi in apice piccolo, come "18º" nel design */
+.deg {
+  font-size: 0.65em;
+  vertical-align: 0.5em;
+}
+
+/* ===== Fascia oraria in basso ===== */
+.hourly {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.hourly-strip {
+  position: relative; /* àncora per la curva assoluta */
+  flex: 1;
+  display: flex;
+  /* Dissolvenza a ogni cambio di pagina (vedi key={page}) */
+  animation: fadeIn 0.3s ease both;
+}
+
+/* La curva delle temperature. L'altezza DEVE essere 64px, uguale al
+   viewBox: così le y calcolate dal componente coincidono coi pixel reali */
+.hourly-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 64px;
+  color: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+
+.hourly-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hourly-day {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: #ffb02e;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+}
+
+/* Zona del grafico, alta come il viewBox (64px): dentro, numero e
+   pallino sono posizionati in assoluto sul punto giusto */
+.hourly-point {
+  position: relative;
+  height: 64px;
+  width: 100%;
+}
+
+.hourly-temp {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 400;
+  color: #e6e6e6;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-dot {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffb02e;
+  box-shadow: 0 0 10px rgba(255, 176, 46, 0.8);
+}
+
+.hourly-time {
+  font-size: 0.72rem;
+  color: #8f8f8f;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* L'orario attuale è dentro una "pilloletta" scura */
+.hourly-time-active {
+  background: #2e2e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f2f2f2;
+}
+
+/* --- Le due frecce a destra --- */
+.hourly-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hourly-arrow {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfcfcf;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.hourly-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.hourly-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ===== Footer ===== */
+.footer {
+  padding: 18px;
+  text-align: center;
+  color: #6f6f6f;
+  font-size: 0.78rem;
+}
+
+.footer a {
+  color: #9a9a9a;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: #ffb02e;
+}
+
+/* ===== Responsive ===== */
+
+/* Tablet: il pannello dei giorni scende sotto, a tutta larghezza */
+@media (max-width: 1024px) {
+  .app-card {
+    padding: 28px 30px 32px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr minmax(0, 1fr);
+  }
+
+  .daily {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Cellulare: tutto in una colonna */
+@media (max-width: 640px) {
+  #root {
+    padding: 14px 10px 0;
+  }
+
+  .app-card {
+    padding: 22px 20px 26px;
+    border-radius: 26px;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 10px;
+  }
+
+  .brand {
+    justify-self: center;
+  }
+
+  .search-form {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .current-stats {
+    justify-content: center;
+  }
+
+  .stat {
+    align-items: center;
+  }
+
+  .hero-icon {
+    max-width: 240px;
+  }
+
+  .daily-row-active::before {
+    left: -12px;
+  }
+
+  /* Le 8 fasce orarie scorrono in orizzontale se non ci stanno */
+  .hourly-strip {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .hourly-col {
+    min-width: 64px;
+  }
+}
